@@ -352,3 +352,71 @@ def test_net(net, imdb, max_per_image=100, thresh=0.01, vis=False):
 
     print 'Evaluating detections'
     imdb.evaluate_detections(all_boxes, output_dir)
+
+
+
+def test_image(net, image_path,classes, max_per_image=100, thresh=0.01, vis=False):
+
+    num_images = 1
+    # all detections are collected into:
+    #    all_boxes[cls][image] = N x 5 array of detections in
+    #    (x1, y1, x2, y2, score)
+    all_boxes = [[[] for _ in xrange(num_images)]
+                 for _ in xrange(len(classes))]
+
+    # output_dir = get_output_dir(imdb, net)
+
+    # timers
+    _t = {'im_preproc': Timer(), 'im_net': Timer(), 'im_postproc': Timer(), 'misc': Timer()}
+
+
+    for i in xrange(num_images):
+        # filter out any ground truth boxes
+        if cfg.TEST.HAS_RPN:
+            box_proposals = None
+
+        im = cv2.imread(image_path)
+        scores, boxes = im_detect(net, im, _t, box_proposals)
+
+        _t['misc'].tic()
+        # skip j = 0, because it's the background class
+        for j in xrange(1, len(classes)):
+            inds = np.where(scores[:, j] > thresh)[0]
+            cls_scores = scores[inds, j]
+            cls_boxes = boxes[inds, j * 4:(j + 1) * 4]
+            cls_dets = np.hstack((cls_boxes, cls_scores[:, np.newaxis])) \
+                .astype(np.float32, copy=False)
+            keep = nms(cls_dets, cfg.TEST.NMS)
+
+            dets_NMSed = cls_dets[keep, :]
+            if cfg.TEST.BBOX_VOTE:
+                cls_dets = bbox_vote(dets_NMSed, cls_dets)
+            else:
+                cls_dets = dets_NMSed
+
+            if vis:
+                vis_detections(im, classes[j], cls_dets)
+            all_boxes[j][i] = cls_dets
+
+        # Limit to max_per_image detections *over all classes*
+        if max_per_image > 0:
+            image_scores = np.hstack([all_boxes[j][i][:, -1]
+                                      for j in xrange(1, imdb.num_classes)])
+            if len(image_scores) > max_per_image:
+                image_thresh = np.sort(image_scores)[-max_per_image]
+                for j in xrange(1, len(classes)):
+                    keep = np.where(all_boxes[j][i][:, -1] >= image_thresh)[0]
+                    all_boxes[j][i] = all_boxes[j][i][keep, :]
+        _t['misc'].toc()
+
+        print 'im_detect: {:d}/{:d}  net {:.3f}s  preproc {:.3f}s  postproc {:.3f}s  misc {:.3f}s' \
+            .format(i + 1, num_images, _t['im_net'].average_time,
+                    _t['im_preproc'].average_time, _t['im_postproc'].average_time,
+                    _t['misc'].average_time)
+
+    # det_file = os.path.join(output_dir, 'detections.pkl')
+    # with open(det_file, 'wb') as f:
+    #     cPickle.dump(all_boxes, f, cPickle.HIGHEST_PROTOCOL)
+
+    # print 'Evaluating detections'
+    # imdb.evaluate_detections(all_boxes, output_dir)
