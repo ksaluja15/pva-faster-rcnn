@@ -16,21 +16,21 @@ import utils.cython_bbox
 import cPickle
 import subprocess
 import uuid
-# from voc_eval import voc_eval
+from custom_dataset_eval import custom_dataset_eval
 from fast_rcnn.config import cfg
 
 class custom_dataset(imdb):
     def __init__(self,image_set,devkit_path):
-        imdb.__init__(self, 'voc_' + '_' + image_set)
+        imdb.__init__(self, 'custom_dataset' + '_' + image_set)
         self._image_set = image_set
         self._devkit_path = devkit_path
         self._data_path = os.path.join(self._devkit_path,'data')
         self._classes = ('__background__', # always index 0
-                         'aeroplane', 'bicycle', 'bird', 'boat',
-                         'bottle', 'bus', 'car', 'cat', 'chair',
-                         'cow', 'diningtable', 'dog', 'horse',
-                         'motorbike', 'person', 'pottedplant',
-                         'sheep', 'sofa', 'train', 'tvmonitor')
+                         'XOJet_1', 'amex_1', 'amex_2', 'amex_3',
+                         'amex_4', 'brita_1', 'budlight_1', 'dk_1', 'dk_2',
+                         'dk_3', 'jbl_1', 'kia_1', 'kp_1','kp_2','kp_3','kp_4','kp_5','mcdonalds_1',
+                         'mountaindew_1', 'nike_1', 'ps4_1',
+                         'ps4_2', 'ps4_3', 'redbull_1', 'redbull_2','sf_1')
         self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
         self._image_ext = '.JPEG'
         self._image_index = self._load_image_set_index()
@@ -48,7 +48,7 @@ class custom_dataset(imdb):
                        'min_size'    : 2}
 
         assert os.path.exists(self._devkit_path), \
-                'VOCdevkit path does not exist: {}'.format(self._devkit_path)
+                'Given devkit path does not exist: {}'.format(self._devkit_path)
 
 
     def image_path_at(self, i):
@@ -100,7 +100,7 @@ class custom_dataset(imdb):
             print '{} gt roidb loaded from {}'.format(self.name, cache_file)
             return roidb
 
-        gt_roidb = [self._load_pascal_annotation(index)
+        gt_roidb = [self._load_custom_annotation(index)
                     for index in self.image_index]
         with open(cache_file, 'wb') as fid:
             cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
@@ -174,12 +174,12 @@ class custom_dataset(imdb):
 
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
-    def _load_pascal_annotation(self, index):
+    def _load_custom_annotation(self, index):
         """
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
-        filename = os.path.join(self._data_path, 'Annotations', index + '.xml')
+        filename = os.path.join(self._data_path, 'Annotations', index + '.txt')
         # tree = ET.parse(filename)
         # objs = tree.findall('object')
         # if not self.config['use_diff']:
@@ -225,7 +225,7 @@ class custom_dataset(imdb):
             y1 = float(bbox[1])
             x2 = float(bbox[2])
             y2 = float(bbox[3])
-            cls = self._class_to_ind[bbox[4].lower()]
+            cls = self._class_to_ind[bbox[4]]
             boxes[obj_ix, :] = [x1, y1, x2, y2]
             gt_classes[obj_ix] = cls
             overlaps[obj_ix, cls] = 1.0
@@ -278,12 +278,12 @@ class custom_dataset(imdb):
             'Annotations',
             '{:s}.txt')
         imagesetfile = os.path.join(
-            self._data_path,
+            self._data_path,'ImageSets',
             self._image_set + '.txt')
         cachedir = os.path.join(self._devkit_path, 'annotations_cache')
         aps = []
         # The PASCAL VOC metric changed in 2010
-        use_07_metric = True if int(self._year) < 2010 else False
+        use_07_metric = False
         print 'VOC07 metric? ' + ('Yes' if use_07_metric else 'No')
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
@@ -329,7 +329,7 @@ class custom_dataset(imdb):
     #     status = subprocess.call(cmd, shell=True)
 
     def evaluate_detections(self, all_boxes, output_dir):
-        self._write_voc_results_file(all_boxes)
+        self._write_custom_dataset_results_file(all_boxes)
         self._do_python_eval(output_dir)
         if self.config['matlab_eval']:
             self._do_matlab_eval(output_dir)

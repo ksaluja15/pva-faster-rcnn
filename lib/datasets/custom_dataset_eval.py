@@ -11,7 +11,7 @@ import numpy as np
 
 def parse_rec(filename):
     """ Parse a PASCAL VOC xml file """
-    tree = ET.parse(filename)
+    #tree = ET.parse(filename)
     objects = []
     obj_count=0
     for line in open(filename,'r'):

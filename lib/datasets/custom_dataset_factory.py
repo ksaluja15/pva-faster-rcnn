@@ -4,9 +4,9 @@ __sets = {}
 from datasets.custom_dataset import custom_dataset
 import numpy as np
 
-devkit_path = ""
+devkit_path = "/home/kunalsaluja/GSWSource_noD_devkit"
 for split in ['train', 'test']:
-    name = '{}_{}'.format('inria', split)
+    name = '{}_{}'.format('custom_dataset', split)
     __sets[name] = (lambda split=split: custom_dataset(split, devkit_path))
 
 def get_imdb(name):

@@ -1,4 +1,4 @@
-train_net: "models/pvanet/example_train/train.prototxt"
+train_net: "models/pvanet/pva9.1/Merged_IIIT2k_Synth8k.pt"
 
 base_lr: 0.001
 lr_policy: "plateau"
