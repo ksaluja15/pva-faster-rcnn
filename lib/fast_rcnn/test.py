@@ -372,8 +372,8 @@ def test_image(net, image_path,classes, max_per_image=100, thresh=0.01, vis=Fals
 
     for i in xrange(num_images):
         # filter out any ground truth boxes
-        if cfg.TEST.HAS_RPN:
-            box_proposals = None
+
+        box_proposals = None
 
         im = cv2.imread(image_path)
         scores, boxes = im_detect(net, im, _t, box_proposals)
